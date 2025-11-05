@@ -28,13 +28,19 @@
   % #1 = width, #2 = mmd file path
   \edef\mermaid@mmdfile{#2}%
   \edef\mermaid@pdffile{#2.pdf}%
+  % Check if puppeteer-config.json exists and add it to mmdc command
+  \IfFileExists{puppeteer-config.json}{%
+    \def\mermaid@puppeteerconfig{-p puppeteer-config.json}%
+  }{%
+    \def\mermaid@puppeteerconfig{}%
+  }%
   \ifmermaid@pdf
     % Generate PDF only
-    \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent}%
+    \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent \mermaid@puppeteerconfig}%
   \else
     % Generate both SVG and PDF
     \edef\mermaid@svgfile{#2.svg}%
-    \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@svgfile\space -b transparent && mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent}%
+    \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@svgfile\space -b transparent \mermaid@puppeteerconfig\space && mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent \mermaid@puppeteerconfig}%
   \fi
   % Always include as PDF (more compatible)
   \IfFileExists{\mermaid@pdffile}{%

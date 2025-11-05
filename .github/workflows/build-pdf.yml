@@ -20,10 +20,42 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Install Chromium dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          chromium-browser \
+          libgbm1 \
+          libnss3 \
+          libnspr4 \
+          libatk1.0-0 \
+          libatk-bridge2.0-0 \
+          libcups2 \
+          libdrm2 \
+          libxkbcommon0 \
+          libxcomposite1 \
+          libxdamage1 \
+          libxfixes3 \
+          libxrandr2 \
+          libpango-1.0-0 \
+          libcairo2 \
+          libasound2
+
     - name: Install Mermaid CLI
       run: |
         npm install -g @mermaid-js/mermaid-cli
         mmdc --version
+
+    - name: Configure Puppeteer for mmdc
+      run: |
+        # Создать конфигурацию Puppeteer с --no-sandbox
+        cat > puppeteer-config.json << 'EOF'
+        {
+          "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+        }
+        EOF
+        echo "Puppeteer config created:"
+        cat puppeteer-config.json
 
     - name: Install TeX Live
       run: |
@@ -49,12 +81,12 @@ jobs:
     - name: Check available fonts
       run: fc-list | grep -i "liberation\|dejavu\|noto" | head -20
 
-    - name: Update main.tex to use available font
+    - name: Update main.tex to use available fonts
       run: |
-        # Заменить Arial на Liberation Sans (аналог Arial в Linux)
-        sed -i 's/\\setmainfont{Arial}/\\setmainfont{Liberation Sans}/g' main.tex
+        # Заменить Arial на Liberation Sans и добавить моноширинный шрифт
+        sed -i 's/\\setmainfont{Arial}  % или другой системный шрифт с кириллицей/\\setmainfont{Liberation Sans}\n\\setmonofont{Liberation Mono}/g' main.tex
         echo "Updated main.tex:"
-        head -10 main.tex
+        head -15 main.tex
 
     - name: Compile LaTeX document
       run: |
