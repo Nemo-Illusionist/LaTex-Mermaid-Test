@@ -52,6 +52,10 @@
 % Использование: \usepackage[outputdir=out]{mermaid}
 \DeclareStringOption[build]{outputdir}
 
+% Опция для включения детального логирования ошибок mmdc
+% Использование: \usepackage[verbose]{mermaid}
+\DeclareBoolOption[false]{verbose}
+
 % Обрабатываем опции
 \ProcessKeyvalOptions*
 
@@ -74,9 +78,30 @@
 \edef\mermaid@dir{\mermaiddir}
 \edef\mermaid@outputdir{\mermaidoutputdir}
 
-% Создание директории при начале документа
-% Хук, выполняемый в начале документа
+% ====== Проверка зависимостей ======
+
+% Флаг доступности mmdc
+\newif\ifmermaid@mmdc@available
+\mermaid@mmdc@availabletrue
+
+% Проверка наличия mmdc при загрузке пакета
 \AtBeginDocument{%
+  % Проверяем наличие mmdc
+  \immediate\write18{command -v mmdc > /dev/null 2>\&1 || echo "MMDC_NOT_FOUND" > \mermaid@outputdir/mermaid-check.tmp || echo "MMDC_NOT_FOUND" > mermaid-check.tmp}%
+
+  % Проверяем результат
+  \IfFileExists{\mermaid@outputdir/mermaid-check.tmp}{%
+    \PackageWarning{mermaid}{mmdc (Mermaid CLI) not found! Please install: npm install -g @mermaid-js/mermaid-cli}%
+    \mermaid@mmdc@availablefalse
+  }{%
+    \IfFileExists{mermaid-check.tmp}{%
+      \PackageWarning{mermaid}{mmdc (Mermaid CLI) not found! Please install: npm install -g @mermaid-js/mermaid-cli}%
+      \mermaid@mmdc@availablefalse
+    }{%
+      \PackageInfo{mermaid}{mmdc found and ready to use}%
+    }%
+  }%
+
   % Создаём mermaid-images внутри output-directory, если она существует
   \immediate\write18{if [ -d "\mermaid@outputdir" ]; then mkdir -p "\mermaid@outputdir/\mermaid@dir" && ln -sf "\mermaid@outputdir/\mermaid@dir" "\mermaid@dir"; else mkdir -p "\mermaid@dir"; fi}%
 }
@@ -113,23 +138,53 @@
   \edef\mermaid@mmdfile{#2}%
   % Формируем путь к выходному PNG файлу (относительный)
   \edef\mermaid@pngfile{#2.png}%
-  % Формируем абсолютные пути для shell команд
-  % Если используется output-directory, файлы находятся в build/mermaid-images
-  \edef\mermaid@absmmdfile{$(pwd)/\mermaid@outputdir/#2}%
-  \edef\mermaid@abspngfile{$(pwd)/\mermaid@outputdir/#2.png}%
-  % Получаем параметры конфигурации Puppeteer
-  \mermaid@getpuppeteerconfig
-  % Генерируем PNG файл через mmdc (Mermaid CLI) с абсолютными путями
-  % Используем fallback для случая без output-directory
-  \immediate\write18{if [ -f "\mermaid@absmmdfile" ]; then mmdc -i "\mermaid@absmmdfile" -o "\mermaid@abspngfile" -b transparent \mermaid@puppeteerconfig; else mmdc -i "$(pwd)/#2" -o "$(pwd)/#2.png" -b transparent \mermaid@puppeteerconfig; fi}%
-  % Вставляем PNG файл в документ (используем относительный путь)
-  \IfFileExists{\mermaid@pngfile}{%
-    % Если PNG файл существует, вставляем его с заданными опциями (или без опций для естественного размера)
-    \includegraphics[#1]{\mermaid@pngfile}%
-  }{%
-    % Если генерация не удалась, показываем сообщение об ошибке
-    \fbox{\parbox[t]{10cm}{\small\tt Error: Mermaid diagram generation failed}}%
-  }%
+  % Формируем путь к лог-файлу для ошибок mmdc
+  \edef\mermaid@logfile{#2.log}%
+
+  % Проверяем доступность mmdc
+  \ifmermaid@mmdc@available
+    % Формируем абсолютные пути для shell команд
+    % Если используется output-directory, файлы находятся в build/mermaid-images
+    \edef\mermaid@absmmdfile{$(pwd)/\mermaid@outputdir/#2}%
+    \edef\mermaid@abspngfile{$(pwd)/\mermaid@outputdir/#2.png}%
+    \edef\mermaid@abslogfile{$(pwd)/\mermaid@outputdir/#2.log}%
+    % Получаем параметры конфигурации Puppeteer
+    \mermaid@getpuppeteerconfig
+
+    % Генерируем PNG файл через mmdc (Mermaid CLI) с абсолютными путями
+    \ifmermaid@verbose
+      % С verbose: логируем stderr в .log файл для диагностики
+      \PackageInfo{mermaid}{Generating diagram with verbose logging: #2}%
+      \immediate\write18{if [ -f "\mermaid@absmmdfile" ]; then mmdc -i "\mermaid@absmmdfile" -o "\mermaid@abspngfile" -b transparent \mermaid@puppeteerconfig 2> "\mermaid@abslogfile" || echo "mmdc failed" >> "\mermaid@abslogfile"; else mmdc -i "$(pwd)/#2" -o "$(pwd)/#2.png" -b transparent \mermaid@puppeteerconfig 2> "$(pwd)/#2.log" || echo "mmdc failed" >> "$(pwd)/#2.log"; fi}%
+    \else
+      % Без verbose: только генерация без логирования
+      \PackageInfo{mermaid}{Generating diagram: #2}%
+      \immediate\write18{if [ -f "\mermaid@absmmdfile" ]; then mmdc -i "\mermaid@absmmdfile" -o "\mermaid@abspngfile" -b transparent \mermaid@puppeteerconfig; else mmdc -i "$(pwd)/#2" -o "$(pwd)/#2.png" -b transparent \mermaid@puppeteerconfig; fi}%
+    \fi
+
+    % Вставляем PNG файл в документ (используем относительный путь)
+    \IfFileExists{\mermaid@pngfile}{%
+      % PNG файл успешно создан
+      \includegraphics[#1]{\mermaid@pngfile}%
+    }{%
+      % Если генерация не удалась, показываем детальное сообщение об ошибке
+      \PackageError{mermaid}{Failed to generate diagram: #2}{Check \mermaid@logfile\space for details}%
+      \fbox{\parbox[t]{10cm}{%
+        \small\ttfamily
+        \textbf{Mermaid Error:} Failed to generate diagram\\
+        File: #2\\
+        Check log: \mermaid@logfile%
+      }}%
+    }%
+  \else
+    % mmdc недоступен - показываем предупреждение
+    \PackageWarning{mermaid}{Cannot generate diagram #2: mmdc not available}%
+    \fbox{\parbox[t]{10cm}{%
+      \small\ttfamily
+      \textbf{Mermaid Error:} mmdc not found\\
+      Install: npm install -g @mermaid-js/mermaid-cli%
+    }}%
+  \fi
 }
 
 % Запись содержимого в файл через shell
