@@ -19,9 +19,15 @@
 
 # Build directory (содержит все временные файлы и mermaid-images/)
 build/
+output/
+diagrams/
 
 # Mermaid symlink (реальная папка находится в build/)
 mermaid-images
+
+# Mermaid error logs and check files
+mermaid-check.tmp
+*.mmd.log
 
 # Puppeteer config (создаётся автоматически в CI)
 puppeteer-config.json

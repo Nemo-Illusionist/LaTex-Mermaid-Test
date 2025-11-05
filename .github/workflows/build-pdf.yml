@@ -92,12 +92,9 @@ jobs:
 
     - name: Compile LaTeX document
       run: |
-        # Используем build.sh скрипт
+        # Используем build.sh скрипт (он уже делает двойную компиляцию)
         chmod +x build.sh
         ./build.sh
-        # Вторая компиляция для корректных ссылок
-        xelatex -shell-escape -interaction=nonstopmode -output-directory=build main.tex
-        cp build/main.pdf .
 
     - name: Check generated files
       run: |
@@ -109,6 +106,37 @@ jobs:
         echo ""
         echo "Mermaid images:"
         ls -lh build/mermaid-images/ || echo "No mermaid images found"
+
+    - name: Validate PDF
+      run: |
+        # Устанавливаем poppler-utils для pdfinfo
+        sudo apt-get install -y poppler-utils
+
+        # Проверяем что PDF валидный и содержит страницы
+        echo "PDF Information:"
+        pdfinfo main.pdf
+
+        # Проверяем количество страниц
+        PAGES=$(pdfinfo main.pdf | grep "Pages:" | awk '{print $2}')
+        echo ""
+        echo "Number of pages: $PAGES"
+
+        if [ "$PAGES" -lt 1 ]; then
+          echo "Error: PDF has no pages!"
+          exit 1
+        fi
+
+        if [ "$PAGES" -gt 0 ]; then
+          echo "✓ PDF is valid with $PAGES pages"
+        fi
+
+        # Проверяем размер файла (должен быть больше 1KB)
+        SIZE=$(stat -c%s main.pdf)
+        if [ "$SIZE" -lt 1024 ]; then
+          echo "Error: PDF is too small ($SIZE bytes)"
+          exit 1
+        fi
+        echo "✓ PDF size is $SIZE bytes"
 
     - name: Upload PDF artifact
       uses: actions/upload-artifact@v4
