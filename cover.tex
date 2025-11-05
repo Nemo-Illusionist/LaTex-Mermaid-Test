@@ -1,0 +1,66 @@
+% ==== Параметры (с дефолтами через \providecommand) ====
+\providecommand{\MinistryName}{МИНИСТЕРСТВО ОБРАЗОВАНИЯ И НАУКИ\\
+ПРИДНЕСТРОВСКОЙ МОЛДАВСКОЙ РЕСПУБЛИКИ}
+
+\providecommand{\UniversityBlockA}{Государственное образовательное учреждение\\
+высшего образования}
+
+\providecommand{\UniversityName}{ПРИДНЕСТРОВСКИЙ ГОСУДАРСТВЕННЫЙ УНИВЕРСИТЕТ\\
+им.\,Т.\,Г.\,ШЕВЧЕНКО}
+
+\providecommand{\Subject}{«Название предмета»}
+\providecommand{\Direction}{<<Код и название направления>>}
+
+\providecommand{\AuthorName}{Фамилия И.О.}
+\providecommand{\AuthorPosition}{должность, кафедра}
+
+\providecommand{\City}{Тирасполь}
+\providecommand{\Year}{\the\year}
+
+% Опционально: логотип. Пример: \def\LogoPath{logo.png}
+% В main.tex можно определить \LogoPath — тогда логотип вставится.
+% Ширину можно менять тут:
+\providecommand{\LogoWidth}{2.2cm}
+
+% ====== Сам титульный лист (не содержит \documentclass) ======
+\begingroup
+\thispagestyle{empty}
+
+% Верхний блок (по центру)
+\begin{center}
+
+% Логотип (опционально)
+\ifdefined\LogoPath
+  \includegraphics[width=\LogoWidth]{\LogoPath}\\[0.5cm]
+\fi
+
+\small{\MinistryName}\\[0.3cm]
+\small{\UniversityBlockA}\\[0.3cm]
+\textbf{\small\UniversityName}\\[1.5cm]
+
+\textbf{\Large МЕТОДИЧЕСКИЕ УКАЗАНИЯ}\\[0.2cm]
+\small{по дисциплине}\\[0.2cm]
+\textbf{\large \Subject}\\[0.7cm]
+\small{для студентов направления подготовки}\\[0.2cm]
+\textbf{\small \Direction}\\[2cm]
+\end{center}
+
+% Блок «Составитель» справа
+\vspace*{\fill}
+\hfill
+\begin{minipage}{0.55\textwidth}
+  \raggedleft
+  \textbf{Составитель:}\\
+  \AuthorName\\
+  \AuthorPosition
+\end{minipage}
+\vspace*{\fill}
+
+% Низ страницы (по центру)
+\begin{center}
+\City\\
+\Year{} г.
+\end{center}
+
+\endgroup
+\clearpage

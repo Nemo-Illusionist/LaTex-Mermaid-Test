@@ -1,18 +1,45 @@
-\documentclass{article}
-\usepackage{fontspec}
+\documentclass[10pt,a5paper]{article}
+
+% ===== Русский + шрифты =====
+\usepackage{fontspec}        % Нужен для XeLaTeX/LuaLaTeX
 \usepackage{polyglossia}
 \setdefaultlanguage{russian}
-\setmainfont{Arial}  % или другой системный шрифт с кириллицей
-% \setmonofont{Courier New}  % моноширинный шрифт для кода
+\setmainfont{Arial}
+\newfontfamily\cyrillicfont{Arial}
 
+% ===== Поля/графика/ссылки =====
+\usepackage{geometry}
+\geometry{top=1.5cm,bottom=1.5cm,left=1.5cm,right=1.5cm}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage[hidelinks]{hyperref}
+
+% (опционально) mermaid может требовать спец. установку и --shell-escape; если ругается — закомментируй
 \usepackage{mermaid}
-% \usepackage[margin=2cm]{geometry}
+
+% ==== Данные методички ====
+\def\Subject{<<Объектно-ориентированный анализ и проектирование>>}
+\def\Direction{01.03.02 <<Прикладная математика и информатика>>}
+\def\AuthorName{Петров П.П.}
+\def\AuthorPosition{преподаватель кафедры информатики}
+\def\City{Тирасполь}
 
 \begin{document}
 
-\section*{Пример Mermaid в LaTeX}
+\input{cover}
+\newpage
 
-\begin{mermaidenv}[width=.5\linewidth]
+\tableofcontents
+\newpage
+
+\input{vvedenie}
+\newpage
+
+\section{Пример Mermaid в LaTeX}
+
+\begin{figure}[htp]
+\centering
+\begin{mermaidenv}[width=4cm]
 graph TD
   A[Start] --> B{Condition?}
   B -- Yes --> C[Do thing]
@@ -20,6 +47,9 @@ graph TD
   C --> E[End]
   D --> E
 \end{mermaidenv}
+\caption{An image of a galaxy}
+\label{fig:galaxy}
+\end{figure}
 
 какой то текст
 

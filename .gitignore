@@ -17,6 +17,12 @@
 *.pdf
 *.run.xml
 
+# Build directory
+build/
+
+# Mermaid temporary files
+mermaid-images/
+
 # Puppeteer config (создаётся автоматически в CI)
 puppeteer-config.json
 
