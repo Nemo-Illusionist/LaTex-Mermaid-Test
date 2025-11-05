@@ -67,3 +67,6 @@ jobs:
             main.pdf
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean mermaid temp files (flat)
+        run: rm -f mermaid-*.mmd mermaid-*.pdf mermaid-*.svg || true
