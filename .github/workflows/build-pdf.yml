@@ -10,6 +10,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'false'
+      PUPPETEER_EXECUTABLE_PATH: '/usr/bin/google-chrome-stable'
 
     steps:
       - name: Checkout
@@ -53,12 +56,13 @@ jobs:
 
       # Сборка PDF. Важно: -shell-escape — чтобы mermaid.sty мог вызвать mmdc
       - name: Build PDF with latexmk
-        env:
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'false'
-          PUPPETEER_EXECUTABLE_PATH: '/usr/bin/google-chrome-stable'
         run: |
-          # Проверяем наличие Chrome
+          # Проверяем наличие Chrome и переменные окружения
           which google-chrome-stable || echo "Chrome not found, using Puppeteer bundled Chromium"
+          echo "PUPPETEER_EXECUTABLE_PATH=$PUPPETEER_EXECUTABLE_PATH"
+          # Тест mmdc
+          mmdc --version || echo "mmdc not found"
+          # Сборка
           latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error main.tex
           ls -l
 
