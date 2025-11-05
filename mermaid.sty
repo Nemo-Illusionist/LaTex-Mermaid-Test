@@ -7,13 +7,18 @@
 \newif\ifmermaidpdf
 \mermaidpdftrue
 \def\mermaidcli{mmdc}          % путь к mermaid-cli
-\def\mermaidoutdir{.mermaid}   % каталог для кэша
+\def\mermaidoutdir{.mermaid}   % каталог для кэша (в обычном режиме)
 \def\mermaidscale{1.0}         % масштаб
 \def\mermaidbg{transparent}    % фон
 
-% стандартная обработка опций
+% режим flat: писать файлы в текущий каталог (для систем с openout_any=p)
+\newif\ifmermaidflat
+\mermaidflatfalse
+
+% опции
 \DeclareOption{svg}{\mermaidpdffalse}
 \DeclareOption{pdf}{\mermaidpdftrue}
+\DeclareOption{flat}{\mermaidflattrue}
 \ProcessOptions\relax
 
 % нужные пакеты
@@ -22,16 +27,18 @@
 \RequirePackage{xstring}
 \RequirePackage{environ}  % для \NewEnviron
 
-% вычисляем md5 (pdfTeX/LuaTeX/XeTeX)
+% md5 (pdfTeX/LuaTeX/XeTeX)
 \ifdefined\pdfmdfivesum
   \newcommand\mermaidhash[1]{\pdfmdfivesum{#1}}
 \else
   \newcommand\mermaidhash[1]{\mdfivesum{#1}}
 \fi
 
-% создание каталога для кэша
+% mkdir для обычного (не flat) режима
 \newcommand*\mermaidhmkdir{%
-  \immediate\write18{mkdir -p \mermaidoutdir > /dev/null 2>&1}%
+  \ifmermaidflat\relax\else
+    \immediate\write18{mkdir -p \mermaidoutdir > /dev/null 2>&1}%
+  \fi
 }
 
 % основная команда
@@ -40,21 +47,26 @@
   \mermaidhmkdir
   \edef\MMraw{#2}%
   \edef\MMhash{\mermaidhash{\MMraw}}%
-  \edef\MMbase{\mermaidoutdir/\MMhash}%
+  % базовое имя файлов (flat: mermaid-<hash>.*; иначе: <outdir>/<hash>.*)
+  \ifmermaidflat
+    \edef\MMbase{mermaid-\MMhash}%
+  \else
+    \edef\MMbase{\mermaidoutdir/\MMhash}%
+  \fi
   \def\MMsrc{\MMbase.mmd}%
   \ifmermaidpdf
     \def\MMout{\MMbase.pdf}%
   \else
     \def\MMout{\MMbase.svg}%
   \fi
-  % создаём исходник, если нет
+  % создаём исходник, если нет (TeX пишет только в текущий каталог при flat)
   \IfFileExists{\MMsrc}{}{%
     \newwrite\MMfile
     \immediate\openout\MMfile=\MMsrc
     \immediate\write\MMfile{#2}%
     \immediate\closeout\MMfile
   }%
-  % генерируем выход, если нет
+  % генерируем выход через mmdc, если нет
   \IfFileExists{\MMout}{}{%
     \immediate\write18{%
       \mermaidcli\space
@@ -64,7 +76,7 @@
       -s \mermaidscale
     }%
   }%
-  % вставляем
+  % вставляем картинку
   \IfFileExists{\MMout}{%
     \includegraphics[#1]{\MMout}%
   }{%
