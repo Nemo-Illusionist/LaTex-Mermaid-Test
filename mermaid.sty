@@ -16,12 +16,13 @@
 % Директория для временных файлов Mermaid
 % Определяем имя папки для хранения .mmd и .png файлов
 \def\mermaid@dir{mermaid-images}
+\def\mermaid@outputdir{build}
 
 % Создание директории при начале документа
 % Хук, выполняемый в начале документа
 \AtBeginDocument{%
-  % Выполняем shell-команду для создания папки (если не существует)
-  \immediate\write18{mkdir -p \mermaid@dir}%
+  % Создаём mermaid-images внутри output-directory, если она существует
+  \immediate\write18{if [ -d "\mermaid@outputdir" ]; then mkdir -p "\mermaid@outputdir/\mermaid@dir" && ln -sf "\mermaid@outputdir/\mermaid@dir" "\mermaid@dir"; else mkdir -p "\mermaid@dir"; fi}%
 }
 
 % Вспомогательная функция для получения имени файла диаграммы
@@ -31,7 +32,8 @@
   \stepcounter{mermaid@counter}%
   % Формируем базовое имя файла (mermaid-1, mermaid-2, ...)
   \edef\mermaid@basename{mermaid-\themermaid@counter}%
-  % Формируем полный путь к .mmd файлу
+  % Формируем путь к .mmd файлу (для VerbatimOut)
+  % Если используется output-directory, файлы будут в build/mermaid-images
   \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
 }
 
@@ -51,15 +53,20 @@
 % Вспомогательная команда для генерации и вставки диаграммы Mermaid
 \newcommand{\mermaid@generate}[2]{%
   % #1 = опции для includegraphics (width, height, scale, keepaspectratio и т.д.), #2 = путь к .mmd файлу
-  % Сохраняем путь к .mmd файлу в переменную
+  % Сохраняем путь к .mmd файлу в переменную (относительный для includegraphics)
   \edef\mermaid@mmdfile{#2}%
-  % Формируем путь к выходному PNG файлу
+  % Формируем путь к выходному PNG файлу (относительный)
   \edef\mermaid@pngfile{#2.png}%
+  % Формируем абсолютные пути для shell команд
+  % Если используется output-directory, файлы находятся в build/mermaid-images
+  \edef\mermaid@absmmdfile{$(pwd)/\mermaid@outputdir/#2}%
+  \edef\mermaid@abspngfile{$(pwd)/\mermaid@outputdir/#2.png}%
   % Получаем параметры конфигурации Puppeteer
   \mermaid@getpuppeteerconfig
-  % Генерируем PNG файл через mmdc (Mermaid CLI)
-  \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@pngfile\space -b transparent \mermaid@puppeteerconfig}%
-  % Вставляем PNG файл в документ
+  % Генерируем PNG файл через mmdc (Mermaid CLI) с абсолютными путями
+  % Используем fallback для случая без output-directory
+  \immediate\write18{if [ -f "\mermaid@absmmdfile" ]; then mmdc -i "\mermaid@absmmdfile" -o "\mermaid@abspngfile" -b transparent \mermaid@puppeteerconfig; else mmdc -i "$(pwd)/#2" -o "$(pwd)/#2.png" -b transparent \mermaid@puppeteerconfig; fi}%
+  % Вставляем PNG файл в документ (используем относительный путь)
   \IfFileExists{\mermaid@pngfile}{%
     % Если PNG файл существует, вставляем его с заданными опциями (или без опций для естественного размера)
     \includegraphics[#1]{\mermaid@pngfile}%
@@ -71,9 +78,13 @@
 
 % Запись содержимого в файл через shell
 \newcommand{\mermaid@writeviaShell}[2]{%
-  % #1 = содержимое, #2 = путь к файлу
+  % #1 = содержимое, #2 = путь к файлу (относительный)
+  % Формируем абсолютный путь для shell команд
+  % Если используется output-directory, записываем в build/
+  \edef\mermaid@tempabsfile{$(pwd)/\mermaid@outputdir/#2}%
   % Используем printf для записи содержимого в файл (сохраняет форматирование)
-  \immediate\write18{printf '\@percentchar s' "#1" > "#2"}%
+  % Используем fallback для случая без output-directory
+  \immediate\write18{if [ -d "\mermaid@outputdir/\mermaid@dir" ]; then printf '\@percentchar s' "#1" > "\mermaid@tempabsfile"; else printf '\@percentchar s' "#1" > "$(pwd)/#2"; fi}%
 }
 
 % Командная версия: \mermaid[опции]{код}

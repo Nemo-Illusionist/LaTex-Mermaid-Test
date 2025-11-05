@@ -17,11 +17,11 @@
 *.pdf
 *.run.xml
 
-# Build directory
+# Build directory (содержит все временные файлы и mermaid-images/)
 build/
 
-# Mermaid temporary files
-mermaid-images/
+# Mermaid symlink (реальная папка находится в build/)
+mermaid-images
 
 # Puppeteer config (создаётся автоматически в CI)
 puppeteer-config.json

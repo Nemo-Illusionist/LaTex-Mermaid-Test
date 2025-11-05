@@ -14,25 +14,22 @@ mkdir -p "$BUILD_DIR"
 
 echo -e "${YELLOW}Сборка проекта...${NC}"
 
-# Компилируем в корне (для работы mermaid)
-xelatex --shell-escape main.tex
+# Компилируем с выводом временных файлов в build/
+# Модифицированный mermaid.sty теперь корректно работает с -output-directory
+xelatex --shell-escape -output-directory="$BUILD_DIR" main.tex
 
 # Проверяем успешность сборки
 if [ $? -eq 0 ]; then
-    # Переносим временные файлы в build/
-    mv -f main.aux main.log main.out main.toc "$BUILD_DIR/" 2>/dev/null
-
-    # Проверяем что PDF создался
-    if [ -f "main.pdf" ]; then
+    # Копируем PDF в корень проекта
+    if [ -f "$BUILD_DIR/main.pdf" ]; then
+        cp "$BUILD_DIR/main.pdf" .
         echo -e "${GREEN}✓ Сборка успешна! PDF создан: main.pdf${NC}"
-        echo -e "${GREEN}  Временные файлы перемещены в $BUILD_DIR/${NC}"
+        echo -e "${GREEN}  Временные файлы в $BUILD_DIR/${NC}"
     else
         echo -e "${RED}✗ Ошибка: PDF файл не создан${NC}"
         exit 1
     fi
 else
-    echo -e "${RED}✗ Ошибка при компиляции. Смотрите main.log${NC}"
-    # Переносим лог для удобства
-    mv -f main.log "$BUILD_DIR/" 2>/dev/null
+    echo -e "${RED}✗ Ошибка при компиляции. Смотрите $BUILD_DIR/main.log${NC}"
     exit 1
 fi
