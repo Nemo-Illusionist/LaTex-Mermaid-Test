@@ -1,0 +1,26 @@
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+
+# Mermaid generated files
+mermaid-*.mmd
+mermaid-*.pdf
+mermaid-*.svg
+
+# Font warnings
+missfont.log
+
+# macOS system files
+.DS_Store
+
+# Compiled PDF (uncomment if you want to track the final PDF)
+main.pdf
