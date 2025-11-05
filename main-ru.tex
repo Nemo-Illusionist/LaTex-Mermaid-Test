@@ -3,16 +3,16 @@
 \usepackage{polyglossia}
 \setdefaultlanguage{russian}
 \setmainfont{Arial}  % или другой системный шрифт с кириллицей
-\setmonofont{Courier New}  % моноширинный шрифт для кода
+% \setmonofont{Courier New}  % моноширинный шрифт для кода
 
-\usepackage[svg]{mermaid}
-\usepackage[margin=2cm]{geometry}
+\usepackage{mermaid}
+% \usepackage[margin=2cm]{geometry}
 
 \begin{document}
 
 \section*{Пример Mermaid в LaTeX}
 
-\begin{mermaidenv}[\linewidth]
+\begin{mermaidenv}
 graph TD
   A[Start] --> B{Condition?}
   B -- Yes --> C[Do thing]
@@ -21,7 +21,7 @@ graph TD
   D --> E
 \end{mermaidenv}
 
-\begin{mermaidenv}[.8\linewidth]
+\begin{mermaidenv}
 graph LR
   subgraph Flow
   A[Input]-->B[Process]-->C[Output]

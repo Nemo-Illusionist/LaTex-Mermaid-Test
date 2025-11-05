@@ -3,16 +3,6 @@
 % Предоставляем информацию о пакете (имя, дата, описание)
 \ProvidesPackage{mermaid}[2025/01/05 Mermaid diagrams support]
 
-% Опции пакета
-% Создаём булев флаг для выбора формата (PDF или SVG)
-\newif\ifmermaid@pdf
-% Опция 'pdf' устанавливает флаг в true (генерировать только PDF)
-\DeclareOption{pdf}{\mermaid@pdftrue}
-% Опция 'svg' устанавливает флаг в false (генерировать SVG и PDF)
-\DeclareOption{svg}{\mermaid@pdffalse}
-% Обрабатываем все опции пакета
-\ProcessOptions\relax
-
 % Подключаемые пакеты
 % graphicx - для вставки изображений
 \RequirePackage{graphicx}
@@ -26,7 +16,7 @@
 \setcounter{mermaid@counter}{0}
 
 % Директория для временных файлов Mermaid
-% Определяем имя папки для хранения .mmd и .pdf/.svg файлов
+% Определяем имя папки для хранения .mmd и .png файлов
 \def\mermaid@dir{mermaid-images}
 
 % Создание директории при начале документа
@@ -41,8 +31,8 @@
   % #1 = ширина изображения, #2 = путь к .mmd файлу
   % Сохраняем путь к .mmd файлу в переменную
   \edef\mermaid@mmdfile{#2}%
-  % Формируем путь к выходному PDF файлу
-  \edef\mermaid@pdffile{#2.pdf}%
+  % Формируем путь к выходному PNG файлу
+  \edef\mermaid@pngfile{#2.png}%
   % Проверяем существование puppeteer-config.json для настроек Chromium
   \IfFileExists{puppeteer-config.json}{%
     % Если файл есть, добавляем параметр -p с путём к конфигу
@@ -51,25 +41,15 @@
     % Если файла нет, параметр остаётся пустым
     \def\mermaid@puppeteerconfig{}%
   }%
-  % Проверяем флаг формата вывода
-  \ifmermaid@pdf
-    % Режим PDF: генерируем только PDF
-    % Выполняем mmdc (Mermaid CLI) с прозрачным фоном
-    \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent \mermaid@puppeteerconfig}%
-  \else
-    % Режим SVG: генерируем и SVG, и PDF
-    % Формируем путь к SVG файлу
-    \edef\mermaid@svgfile{#2.svg}%
-    % Выполняем две команды mmdc через && (сначала SVG, потом PDF)
-    \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@svgfile\space -b transparent \mermaid@puppeteerconfig\space && mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent \mermaid@puppeteerconfig}%
-  \fi
-  % Всегда вставляем PDF (более совместимо с LaTeX движками)
-  \IfFileExists{\mermaid@pdffile}{%
-    % Если PDF файл существует, вставляем его с заданной шириной
-    \includegraphics[width=#1]{\mermaid@pdffile}%
+  % Генерируем PNG файл через mmdc (Mermaid CLI)
+  \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@pngfile\space -b transparent \mermaid@puppeteerconfig}%
+  % Вставляем PNG файл в документ
+  \IfFileExists{\mermaid@pngfile}{%
+    % Если PNG файл существует, вставляем его с заданной шириной
+    \includegraphics[width=#1]{\mermaid@pngfile}%
   }{%
     % Если генерация не удалась, показываем сообщение об ошибке
-    \fbox{\parbox[t]{#1}{\small\tt Error: Mermaid diagram generation failed}}%
+    \fbox{\parbox[t]{10cm}{\small\tt Error: Mermaid diagram generation failed}}%
   }%
 }
 
@@ -81,6 +61,7 @@
 }
 
 % Командная версия: \mermaid[ширина]{код}
+% По умолчанию использует ширину линии текста
 \newcommand{\mermaid}[2][\linewidth]{%
   % Увеличиваем счётчик диаграм на 1
   \stepcounter{mermaid@counter}%
@@ -94,16 +75,15 @@
   \mermaid@generate{#1}{\mermaid@mmdfile}%
 }
 
-% Окружение для многострочных диаграмм: \begin{mermaidenv}[ширина]...\end{mermaidenv}
-\newenvironment{mermaidenv}[1][\linewidth]{%
+% Окружение для многострочных диаграмм: \begin{mermaidenv}...\end{mermaidenv}
+% Всегда использует \linewidth
+\newenvironment{mermaidenv}{%
   % Увеличиваем счётчик диаграм на 1
   \stepcounter{mermaid@counter}%
   % Формируем базовое имя файла
   \edef\mermaid@basename{mermaid-\themermaid@counter}%
   % Формируем полный путь к .mmd файлу
   \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
-  % Сохраняем ширину в глобальной переменной (нужна при закрытии окружения)
-  \xdef\mermaid@currentwidth{#1}%
   % Сохраняем путь к файлу в глобальной переменной
   \xdef\mermaid@currentfile{\mermaid@mmdfile}%
   % Начинаем захват verbatim текста в файл (сохраняет все символы как есть)
@@ -113,8 +93,8 @@
   \endVerbatimOut
   % Начинаем новый абзац, добавляем отступ 0.5 строки, убираем отступ слева, центрируем
   \par\vspace{0.5\baselineskip}\noindent\centering
-  % Генерируем и вставляем диаграмму с сохранёнными параметрами
-  \mermaid@generate{\mermaid@currentwidth}{\mermaid@currentfile}%
+  % Генерируем и вставляем диаграмму (всегда \linewidth)
+  \mermaid@generate{\linewidth}{\mermaid@currentfile}%
   % Начинаем новый абзац, добавляем отступ 0.5 строки, запрещаем разрыв страницы
   \par\vspace{0.5\baselineskip}\nobreak
 }
