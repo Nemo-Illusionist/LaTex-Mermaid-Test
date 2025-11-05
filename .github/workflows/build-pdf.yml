@@ -83,8 +83,10 @@ jobs:
 
     - name: Update main.tex to use available fonts
       run: |
-        # Заменить Arial на Liberation Sans и добавить моноширинный шрифт
-        sed -i 's/\\setmainfont{Arial}  % или другой системный шрифт с кириллицей/\\setmainfont{Liberation Sans}\n\\setmonofont{Liberation Mono}/g' main.tex
+        # Заменить Arial на Liberation Sans
+        sed -i 's/\\setmainfont{Arial}/\\setmainfont{Liberation Sans}/g' main.tex
+        # Заменить Courier New на Liberation Mono
+        sed -i 's/\\setmonofont{Courier New}/\\setmonofont{Liberation Mono}/g' main.tex
         echo "Updated main.tex:"
         head -15 main.tex
 
