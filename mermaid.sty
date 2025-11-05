@@ -1,22 +1,78 @@
+% ==============================================================================
+% Пакет mermaid.sty v1.0.0
+% Автор: Модифицированная версия для интеграции Mermaid диаграмм в LaTeX
+% Дата: 2025/01/05
+%
+% Описание:
+%   Позволяет вставлять Mermaid диаграммы в LaTeX документы с автоматической
+%   генерацией изображений через mermaid-cli (mmdc).
+%
+% Требования:
+%   - XeLaTeX/LuaLaTeX с опцией --shell-escape
+%   - Node.js и @mermaid-js/mermaid-cli (mmdc)
+%
+% Использование:
+%   \usepackage{mermaid}                          % Дефолтные настройки
+%   \usepackage[outputdir=out]{mermaid}           % Кастомная output-directory
+%   \usepackage[mermaiddir=diagrams]{mermaid}     % Кастомная папка для диаграмм
+%   \usepackage[outputdir=build, mermaiddir=img/mermaid]{mermaid}  % Оба параметра
+%
+% Примеры:
+%   \mermaid[width=5cm]{graph TD; A-->B}          % Inline диаграмма
+%   \begin{mermaidenv}[width=\linewidth]          % Multiline диаграмма
+%     graph LR
+%       A-->B
+%   \end{mermaidenv}
+% ==============================================================================
+
 % Объявляем, что пакет требует формат LaTeX2e
 \NeedsTeXFormat{LaTeX2e}
-% Предоставляем информацию о пакете (имя, дата, описание)
-\ProvidesPackage{mermaid}[2025/01/05 Mermaid diagrams support]
+% Предоставляем информацию о пакете (имя, дата, версия, описание)
+\ProvidesPackage{mermaid}[2025/01/05 v1.0.0 Mermaid diagrams support]
 
 % Подключаемые пакеты
 % graphicx - для вставки изображений
 \RequirePackage{graphicx}
 % fancyvrb - для работы с verbatim окружениями (сохранение текста как есть)
 \RequirePackage{fancyvrb}
+% kvoptions - для обработки опций пакета
+\RequirePackage{kvoptions}
+
+% Настройка опций пакета
+\SetupKeyvalOptions{
+  family=mermaid,
+  prefix=mermaid@
+}
+
+% Опция для задания имени директории с mermaid файлами
+% Использование: \usepackage[mermaiddir=diagrams]{mermaid}
+\DeclareStringOption[mermaid-images]{mermaiddir}
+
+% Опция для задания output-directory (если используется xelatex -output-directory)
+% Использование: \usepackage[outputdir=out]{mermaid}
+\DeclareStringOption[build]{outputdir}
+
+% Обрабатываем опции
+\ProcessKeyvalOptions*
+
+% Информационные сообщения о конфигурации
+\PackageInfo{mermaid}{v1.0.0 loaded}
+\PackageInfo{mermaid}{Mermaid directory: \mermaid@mermaiddir}
+\PackageInfo{mermaid}{Output directory: \mermaid@outputdir}
 
 % Счётчик для уникальных имён файлов
 % Создаём счётчик для нумерации диаграм
 \newcounter{mermaid@counter}
 
 % Директория для временных файлов Mermaid
-% Определяем имя папки для хранения .mmd и .png файлов
-\def\mermaid@dir{mermaid-images}
-\def\mermaid@outputdir{build}
+% Используем значения из опций или дефолтные
+% Пользователь может переопределить через \renewcommand{\mermaiddir}{...} ДО \usepackage{mermaid}
+\providecommand{\mermaiddir}{\mermaid@mermaiddir}
+\providecommand{\mermaidoutputdir}{\mermaid@outputdir}
+
+% Внутренние переменные (для обратной совместимости)
+\edef\mermaid@dir{\mermaiddir}
+\edef\mermaid@outputdir{\mermaidoutputdir}
 
 % Создание директории при начале документа
 % Хук, выполняемый в начале документа
