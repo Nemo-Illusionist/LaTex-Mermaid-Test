@@ -1,133 +1,78 @@
-% mermaid.sty — минимальная интеграция Mermaid CLI в LaTeX
-% версия 2025/11/05
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{mermaid}[2025/11/05 Minimal Mermaid integration]
+\ProvidesPackage{mermaid}[2025/01/05 Mermaid diagrams support]
 
-% параметры по умолчанию
-\newif\ifmermaidpdf
-\mermaidpdftrue
-\def\mermaidcli{mmdc}          % путь к mermaid-cli
-\def\mermaidoutdir{.mermaid}   % каталог для кэша (в обычном режиме)
-\def\mermaidscale{1.0}         % масштаб
-\def\mermaidbg{transparent}    % фон
-
-% режим flat: писать файлы в текущий каталог (для систем с openout_any=p)
-\newif\ifmermaidflat
-\mermaidflatfalse
-
-% опции
-\DeclareOption{svg}{\mermaidpdffalse}
-\DeclareOption{pdf}{\mermaidpdftrue}
-\DeclareOption{flat}{\mermaidflattrue}
+% Package options
+\newif\ifmermaid@pdf
+\DeclareOption{pdf}{\mermaid@pdftrue}
+\DeclareOption{svg}{\mermaid@pdffalse}
 \ProcessOptions\relax
 
-% нужные пакеты
+% Required packages
 \RequirePackage{graphicx}
-\RequirePackage{ifthen}
-\RequirePackage{xstring}
-\RequirePackage{environ}  % для \NewEnviron
-\RequirePackage{fancyvrb}  % для verbatim записи
+\RequirePackage{fancyvrb}
 
-% md5 (pdfTeX/LuaTeX/XeTeX)
-\ifdefined\pdfmdfivesum
-  \newcommand\mermaidhash[1]{\pdfmdfivesum{#1}}
-\else
-  \newcommand\mermaidhash[1]{\mdfivesum{#1}}
-\fi
+% Counter for unique file names
+\newcounter{mermaid@counter}
+\setcounter{mermaid@counter}{0}
 
-% Счетчик для уникальных имен файлов
-\newcounter{mermaidcounter}
+% Directory for temporary Mermaid files
+\def\mermaid@dir{mermaid-images}
 
-% mkdir для обычного (не flat) режима
-\newcommand*\mermaidhmkdir{%
-  \ifmermaidflat\relax\else
-    \immediate\write18{mkdir -p \mermaidoutdir > /dev/null 2>&1}%
-  \fi
+% Create directory if it doesn't exist
+\AtBeginDocument{%
+  \immediate\write18{mkdir -p \mermaid@dir}%
 }
 
-% основная команда
-\newcommand{\mermaid}[2][]{%
-  \begingroup
-  \mermaidhmkdir
-  \edef\MMraw{#2}%
-  \edef\MMhash{\mermaidhash{\MMraw}}%
-  % базовое имя файлов (flat: mermaid-<hash>.*; иначе: <outdir>/<hash>.*)
-  \ifmermaidflat
-    \edef\MMbase{mermaid-\MMhash}%
+% Helper to generate and include mermaid diagram
+\newcommand{\mermaid@generate}[2]{%
+  % #1 = width, #2 = mmd file path
+  \edef\mermaid@mmdfile{#2}%
+  \edef\mermaid@pdffile{#2.pdf}%
+  \ifmermaid@pdf
+    % Generate PDF only
+    \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent}%
   \else
-    \edef\MMbase{\mermaidoutdir/\MMhash}%
+    % Generate both SVG and PDF
+    \edef\mermaid@svgfile{#2.svg}%
+    \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@svgfile\space -b transparent && mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent}%
   \fi
-  \def\MMsrc{\MMbase.mmd}%
-  \ifmermaidpdf
-    \def\MMout{\MMbase.pdf}%
-  \else
-    \def\MMout{\MMbase.svg}%
-  \fi
-  % создаём исходник, если нет (TeX пишет только в текущий каталог при flat)
-  \IfFileExists{\MMsrc}{}{%
-    \newwrite\MMfile
-    \immediate\openout\MMfile=\MMsrc
-    \immediate\write\MMfile{#2}%
-    \immediate\closeout\MMfile
-  }%
-  % генерируем выход через mmdc, если нет
-  \IfFileExists{\MMout}{}{%
-    \immediate\write18{%
-      \mermaidcli\space
-      -i \MMsrc\space
-      -o \MMout\space
-      -b \mermaidbg\space
-      -s \mermaidscale
-    }%
-  }%
-  % вставляем картинку
-  \IfFileExists{\MMout}{%
-    \includegraphics[#1]{\MMout}%
+  % Always include as PDF (more compatible)
+  \IfFileExists{\mermaid@pdffile}{%
+    \includegraphics[width=#1]{\mermaid@pdffile}%
   }{%
-    \fbox{\footnotesize Mermaid render failed: \MMout}%
+    \fbox{\parbox[t]{#1}{\small\tt Error: Mermaid diagram generation failed}}%
   }%
-  \endgroup
 }
 
-% окружение для многострочного Mermaid-кода (verbatim с сохранением переносов строк)
-\newenvironment{mermaidenv}[1][]{%
-  \stepcounter{mermaidcounter}%
-  \mermaidhmkdir
-  \ifmermaidflat
-    \edef\MMbase{mermaid-\arabic{mermaidcounter}}%
-  \else
-    \edef\MMbase{\mermaidoutdir/\arabic{mermaidcounter}}%
-  \fi
-  \edef\MMsrc{\MMbase.mmd}%
-  \ifmermaidpdf
-    \edef\MMout{\MMbase.pdf}%
-  \else
-    \edef\MMout{\MMbase.svg}%
-  \fi
-  % сохраняем опции для использования после \endVerbatimOut
-  \IfStrEq{#1}{}{%
-    \gdef\mermaidopts{}%
-  }{%
-    \gdef\mermaidopts{[#1]}%
-  }%
-  % начинаем verbatim запись в файл
-  \VerbatimOut{\MMsrc}%
+% Write content to file via shell echo
+\newcommand{\mermaid@writeviaShell}[2]{%
+  % #1 = content, #2 = file path
+  \immediate\write18{printf '\@percentchar s' "#1" > "#2"}%
+}
+
+% Command version: \mermaid[width]{code}
+\newcommand{\mermaid}[2][\linewidth]{%
+  \stepcounter{mermaid@counter}%
+  \edef\mermaid@basename{mermaid-\themermaid@counter}%
+  \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
+  % Write content via shell
+  \mermaid@writeviaShell{#2}{\mermaid@mmdfile}%
+  \mermaid@generate{#1}{\mermaid@mmdfile}%
+}
+
+% Environment version using VerbatimOut
+\newenvironment{mermaidenv}[1][\linewidth]{%
+  \stepcounter{mermaid@counter}%
+  \edef\mermaid@basename{mermaid-\themermaid@counter}%
+  \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
+  \xdef\mermaid@currentwidth{#1}%
+  \xdef\mermaid@currentfile{\mermaid@mmdfile}%
+  \VerbatimOut{\mermaid@mmdfile}%
 }{%
   \endVerbatimOut
-  % генерируем выход через mmdc
-  \IfFileExists{\MMout}{}{%
-    \immediate\write18{%
-      \mermaidcli\space
-      -i \MMsrc\space
-      -o \MMout\space
-      -b \mermaidbg\space
-      -s \mermaidscale
-    }%
-  }%
-  % вставляем картинку
-  \IfFileExists{\MMout}{%
-    \expandafter\includegraphics\mermaidopts{\MMout}%
-  }{%
-    \fbox{\footnotesize Mermaid render failed: \MMout}%
-  }%
+  \begin{center}%
+    \mermaid@generate{\mermaid@currentwidth}{\mermaid@currentfile}%
+  \end{center}%
 }
+
+\endinput

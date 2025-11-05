@@ -1,15 +1,17 @@
 \documentclass{article}
-\usepackage[utf8]{inputenc}
-\usepackage[T2A]{fontenc}
-\usepackage[russian]{babel}
-\usepackage[pdf,flat]{mermaid}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{russian}
+\setmainfont{Arial}  % или другой системный шрифт с кириллицей
+
+\usepackage[svg]{mermaid}
 \usepackage[margin=2cm]{geometry}
 
 \begin{document}
 
 \section*{Пример Mermaid в LaTeX}
 
-\begin{mermaidenv}[width=\linewidth]
+\begin{mermaidenv}[\linewidth]
 graph TD
   A[Start] --> B{Condition?}
   B -- Yes --> C[Do thing]
@@ -18,7 +20,7 @@ graph TD
   D --> E
 \end{mermaidenv}
 
-\begin{mermaidenv}[width=.8\linewidth]
+\begin{mermaidenv}[.8\linewidth]
 graph LR
   subgraph Flow
   A[Input]-->B[Process]-->C[Output]
