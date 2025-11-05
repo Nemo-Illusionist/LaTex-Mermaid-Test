@@ -14,20 +14,13 @@
 *.bbl
 *.blg
 *.bcf
+*.pdf
 *.run.xml
-
-# Mermaid generated images (опционально - можно закоммитить для истории)
-# Раскомментируйте если не хотите коммитить сгенерированные изображения
-# mermaid-images/*.pdf
-# mermaid-images/*.svg
-
-# Compiled PDFs (опционально)
-# main.pdf
-# main-ru.pdf
-# test-mermaid.pdf
 
 # Puppeteer config (создаётся автоматически в CI)
 puppeteer-config.json
+
+settings.local.json
 
 # macOS
 .DS_Store
