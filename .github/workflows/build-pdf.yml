@@ -83,27 +83,32 @@ jobs:
 
     - name: Update main.tex to use available fonts
       run: |
-        # Заменить Arial на Liberation Sans
-        sed -i 's/\\setmainfont{Arial}/\\setmainfont{Liberation Sans}/g' main.tex
-        # Заменить Courier New на Liberation Mono
-        sed -i 's/\\setmonofont{Courier New}/\\setmonofont{Liberation Mono}/g' main.tex
+        # Заменить все вхождения Arial на Liberation Sans
+        sed -i 's/Arial/Liberation Sans/g' main.tex
+        # Заменить Courier New на Liberation Mono (если есть)
+        sed -i 's/Courier New/Liberation Mono/g' main.tex
         echo "Updated main.tex:"
         head -15 main.tex
 
     - name: Compile LaTeX document
       run: |
-        # Первая компиляция
-        xelatex -shell-escape -interaction=nonstopmode main.tex
+        # Используем build.sh скрипт
+        chmod +x build.sh
+        ./build.sh
         # Вторая компиляция для корректных ссылок
-        xelatex -shell-escape -interaction=nonstopmode main.tex
+        xelatex -shell-escape -interaction=nonstopmode -output-directory=build main.tex
+        cp build/main.pdf .
 
     - name: Check generated files
       run: |
         echo "Main PDF:"
         ls -lh main.pdf
         echo ""
+        echo "Build directory:"
+        ls -lh build/
+        echo ""
         echo "Mermaid images:"
-        ls -lh mermaid-images/
+        ls -lh build/mermaid-images/ || echo "No mermaid images found"
 
     - name: Upload PDF artifact
       uses: actions/upload-artifact@v4
@@ -118,8 +123,8 @@ jobs:
       with:
         name: build-logs
         path: |
-          *.log
-          *.aux
+          build/*.log
+          build/*.aux
         retention-days: 7
 
   # Опциональный job для создания релиза при тегах
