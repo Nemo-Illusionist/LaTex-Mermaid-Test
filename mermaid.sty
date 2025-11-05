@@ -12,8 +12,6 @@
 % Счётчик для уникальных имён файлов
 % Создаём счётчик для нумерации диаграм
 \newcounter{mermaid@counter}
-% Инициализируем счётчик нулём
-\setcounter{mermaid@counter}{0}
 
 % Директория для временных файлов Mermaid
 % Определяем имя папки для хранения .mmd и .png файлов
@@ -26,13 +24,20 @@
   \immediate\write18{mkdir -p \mermaid@dir}%
 }
 
-% Вспомогательная команда для генерации и вставки диаграммы Mermaid
-\newcommand{\mermaid@generate}[2]{%
-  % #1 = ширина изображения, #2 = путь к .mmd файлу
-  % Сохраняем путь к .mmd файлу в переменную
-  \edef\mermaid@mmdfile{#2}%
-  % Формируем путь к выходному PNG файлу
-  \edef\mermaid@pngfile{#2.png}%
+% Вспомогательная функция для получения имени файла диаграммы
+% Результат сохраняется в \mermaid@mmdfile
+\newcommand{\mermaid@getfilename}{%
+  % Увеличиваем счётчик диаграм на 1
+  \stepcounter{mermaid@counter}%
+  % Формируем базовое имя файла (mermaid-1, mermaid-2, ...)
+  \edef\mermaid@basename{mermaid-\themermaid@counter}%
+  % Формируем полный путь к .mmd файлу
+  \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
+}
+
+% Вспомогательная функция для получения параметров Puppeteer
+% Результат сохраняется в \mermaid@puppeteerconfig
+\newcommand{\mermaid@getpuppeteerconfig}{%
   % Проверяем существование puppeteer-config.json для настроек Chromium
   \IfFileExists{puppeteer-config.json}{%
     % Если файл есть, добавляем параметр -p с путём к конфигу
@@ -41,12 +46,23 @@
     % Если файла нет, параметр остаётся пустым
     \def\mermaid@puppeteerconfig{}%
   }%
+}
+
+% Вспомогательная команда для генерации и вставки диаграммы Mermaid
+\newcommand{\mermaid@generate}[2]{%
+  % #1 = опции для includegraphics (width, height, scale, keepaspectratio и т.д.), #2 = путь к .mmd файлу
+  % Сохраняем путь к .mmd файлу в переменную
+  \edef\mermaid@mmdfile{#2}%
+  % Формируем путь к выходному PNG файлу
+  \edef\mermaid@pngfile{#2.png}%
+  % Получаем параметры конфигурации Puppeteer
+  \mermaid@getpuppeteerconfig
   % Генерируем PNG файл через mmdc (Mermaid CLI)
   \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@pngfile\space -b transparent \mermaid@puppeteerconfig}%
   % Вставляем PNG файл в документ
   \IfFileExists{\mermaid@pngfile}{%
-    % Если PNG файл существует, вставляем его с заданной шириной
-    \includegraphics[width=#1]{\mermaid@pngfile}%
+    % Если PNG файл существует, вставляем его с заданными опциями (или без опций для естественного размера)
+    \includegraphics[#1]{\mermaid@pngfile}%
   }{%
     % Если генерация не удалась, показываем сообщение об ошибке
     \fbox{\parbox[t]{10cm}{\small\tt Error: Mermaid diagram generation failed}}%
@@ -60,43 +76,40 @@
   \immediate\write18{printf '\@percentchar s' "#1" > "#2"}%
 }
 
-% Командная версия: \mermaid[ширина]{код}
-% По умолчанию использует ширину линии текста
-\newcommand{\mermaid}[2][\linewidth]{%
-  % Увеличиваем счётчик диаграм на 1
-  \stepcounter{mermaid@counter}%
-  % Формируем базовое имя файла (mermaid-1, mermaid-2, ...)
-  \edef\mermaid@basename{mermaid-\themermaid@counter}%
-  % Формируем полный путь к .mmd файлу
-  \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
+% Командная версия: \mermaid[опции]{код}
+% По умолчанию использует естественный размер изображения
+% Опции могут быть: width=5cm, height=3cm, scale=0.8, keepaspectratio и т.д.
+\newcommand{\mermaid}[2][]{%
+  % Получаем уникальное имя файла для диаграммы
+  \mermaid@getfilename
   % Записываем код Mermaid в файл через shell
   \mermaid@writeviaShell{#2}{\mermaid@mmdfile}%
   % Генерируем и вставляем диаграмму
   \mermaid@generate{#1}{\mermaid@mmdfile}%
 }
 
-% Окружение для многострочных диаграмм: \begin{mermaidenv}...\end{mermaidenv}
-% Всегда использует \linewidth
-\newenvironment{mermaidenv}{%
-  % Увеличиваем счётчик диаграм на 1
-  \stepcounter{mermaid@counter}%
-  % Формируем базовое имя файла
-  \edef\mermaid@basename{mermaid-\themermaid@counter}%
-  % Формируем полный путь к .mmd файлу
-  \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
-  % Сохраняем путь к файлу в глобальной переменной
-  \xdef\mermaid@currentfile{\mermaid@mmdfile}%
-  % Начинаем захват verbatim текста в файл (сохраняет все символы как есть)
+% Глобальная переменная для хранения опций окружения
+\gdef\mermaid@includegraphics{}
+
+% Окружение для многострочных диаграмм: \begin{mermaidenv}[опции]...\end{mermaidenv}
+% По умолчанию использует естественный размер изображения
+% Опции могут быть: width=\linewidth, width=5cm, height=3cm, scale=0.8 и т.д.
+\newenvironment{mermaidenv}[1][]{%
+  % Сохраняем опции в глобальную переменную (без расширения, graphicx сам обработает команды)
+  \gdef\mermaid@includegraphics{#1}%
+  % Получаем уникальное имя файла для диаграммы
+  \mermaid@getfilename
+  % Начинаем захват verbatim текста в файл (сохраняет все символы как есть, включая переносы строк)
   \VerbatimOut{\mermaid@mmdfile}%
 }{%
   % Завершаем захват verbatim текста
   \endVerbatimOut
-  % Начинаем новый абзац, добавляем отступ 0.5 строки, убираем отступ слева, центрируем
-  \par\vspace{0.5\baselineskip}\noindent\centering
-  % Генерируем и вставляем диаграмму (всегда \linewidth)
-  \mermaid@generate{\linewidth}{\mermaid@currentfile}%
-  % Начинаем новый абзац, добавляем отступ 0.5 строки, запрещаем разрыв страницы
-  \par\vspace{0.5\baselineskip}\nobreak
+  % Генерируем и вставляем диаграмму с сохранёнными опциями
+  % Используем \expandafter для расширения значения переменной перед передачей в функцию
+  % Используем имя файла, полученное в первом блоке (сохранено в \mermaid@mmdfile)
+  \expandafter\mermaid@generate\expandafter{\mermaid@includegraphics}{\mermaid@mmdfile}%
+  % Сбрасываем опции после использования
+  \gdef\mermaid@includegraphics{}%
 }
 
 % Конец файла пакета
