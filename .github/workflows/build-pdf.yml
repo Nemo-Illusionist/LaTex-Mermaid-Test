@@ -112,20 +112,6 @@ jobs:
         path: main.pdf
         retention-days: 30
 
-    - name: Upload Mermaid SVG files
-      uses: actions/upload-artifact@v4
-      with:
-        name: mermaid-svg-images
-        path: mermaid-images/*.svg
-        retention-days: 30
-
-    - name: Upload Mermaid PDF files
-      uses: actions/upload-artifact@v4
-      with:
-        name: mermaid-pdf-images
-        path: mermaid-images/*.pdf
-        retention-days: 30
-
     - name: Upload build logs
       if: always()
       uses: actions/upload-artifact@v4
@@ -148,24 +134,16 @@ jobs:
       with:
         name: main-pdf
 
-    - name: Download SVG artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: mermaid-svg-images
-        path: mermaid-svg/
-
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
           main.pdf
-          mermaid-svg/*.svg
         body: |
           Автоматически сгенерированный релиз LaTeX документа с Mermaid диаграммами.
 
           ## Содержимое
           - `main.pdf` - основной документ
-          - Mermaid диаграммы в формате SVG
         draft: false
         prerelease: false
       env:
