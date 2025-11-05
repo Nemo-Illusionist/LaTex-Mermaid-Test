@@ -26,6 +26,7 @@
 \RequirePackage{ifthen}
 \RequirePackage{xstring}
 \RequirePackage{environ}  % для \NewEnviron
+\RequirePackage{fancyvrb}  % для verbatim записи
 
 % md5 (pdfTeX/LuaTeX/XeTeX)
 \ifdefined\pdfmdfivesum
@@ -33,6 +34,9 @@
 \else
   \newcommand\mermaidhash[1]{\mdfivesum{#1}}
 \fi
+
+% Счетчик для уникальных имен файлов
+\newcounter{mermaidcounter}
 
 % mkdir для обычного (не flat) режима
 \newcommand*\mermaidhmkdir{%
@@ -85,7 +89,45 @@
   \endgroup
 }
 
-% окружение для многострочного Mermaid-кода
-\NewEnviron{mermaidenv}[1][]{%
-  \mermaid[#1]{\BODY}%
+% окружение для многострочного Mermaid-кода (verbatim с сохранением переносов строк)
+\newenvironment{mermaidenv}[1][]{%
+  \stepcounter{mermaidcounter}%
+  \mermaidhmkdir
+  \ifmermaidflat
+    \edef\MMbase{mermaid-\arabic{mermaidcounter}}%
+  \else
+    \edef\MMbase{\mermaidoutdir/\arabic{mermaidcounter}}%
+  \fi
+  \edef\MMsrc{\MMbase.mmd}%
+  \ifmermaidpdf
+    \edef\MMout{\MMbase.pdf}%
+  \else
+    \edef\MMout{\MMbase.svg}%
+  \fi
+  % сохраняем опции для использования после \endVerbatimOut
+  \IfStrEq{#1}{}{%
+    \gdef\mermaidopts{}%
+  }{%
+    \gdef\mermaidopts{[#1]}%
+  }%
+  % начинаем verbatim запись в файл
+  \VerbatimOut{\MMsrc}%
+}{%
+  \endVerbatimOut
+  % генерируем выход через mmdc
+  \IfFileExists{\MMout}{}{%
+    \immediate\write18{%
+      \mermaidcli\space
+      -i \MMsrc\space
+      -o \MMout\space
+      -b \mermaidbg\space
+      -s \mermaidscale
+    }%
+  }%
+  % вставляем картинку
+  \IfFileExists{\MMout}{%
+    \expandafter\includegraphics\mermaidopts{\MMout}%
+  }{%
+    \fbox{\footnotesize Mermaid render failed: \MMout}%
+  }%
 }
