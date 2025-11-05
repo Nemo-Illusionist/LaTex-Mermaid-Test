@@ -1,0 +1,28 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage[pdf]{mermaid}
+\usepackage[margin=2cm]{geometry}
+
+\begin{document}
+
+\section*{Пример Mermaid в LaTeX}
+
+\mermaid[width=\linewidth]{graph TD
+  A[Start] --> B{Condition?}
+  B -- Yes --> C[Do thing]
+  B -- No  --> D[Other thing]
+  C --> E[End]
+  D --> E
+}
+
+\begin{mermaidenv}[width=.8\linewidth]
+graph LR
+  subgraph Flow
+  A[Input]-->B[Process]-->C[Output]
+  end
+  A -.-> C
+\end{mermaidenv}
+
+\end{document}

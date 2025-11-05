@@ -1,0 +1,79 @@
+% mermaid.sty — минимальная интеграция Mermaid CLI в LaTeX
+% версия 2025/11/05
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{mermaid}[2025/11/05 Minimal Mermaid integration]
+
+% параметры по умолчанию
+\newif\ifmermaidpdf
+\mermaidpdftrue
+\def\mermaidcli{mmdc}          % путь к mermaid-cli
+\def\mermaidoutdir{.mermaid}   % каталог для кэша
+\def\mermaidscale{1.0}         % масштаб
+\def\mermaidbg{transparent}    % фон
+
+% стандартная обработка опций
+\DeclareOption{svg}{\mermaidpdffalse}
+\DeclareOption{pdf}{\mermaidpdftrue}
+\ProcessOptions\relax
+
+% нужные пакеты
+\RequirePackage{graphicx}
+\RequirePackage{ifthen}
+\RequirePackage{xstring}
+\RequirePackage{environ}  % для \NewEnviron
+
+% вычисляем md5 (pdfTeX/LuaTeX/XeTeX)
+\ifdefined\pdfmdfivesum
+  \newcommand\mermaidhash[1]{\pdfmdfivesum{#1}}
+\else
+  \newcommand\mermaidhash[1]{\mdfivesum{#1}}
+\fi
+
+% создание каталога для кэша
+\newcommand*\mermaidhmkdir{%
+  \immediate\write18{mkdir -p \mermaidoutdir > /dev/null 2>&1}%
+}
+
+% основная команда
+\newcommand{\mermaid}[2][]{%
+  \begingroup
+  \mermaidhmkdir
+  \edef\MMraw{#2}%
+  \edef\MMhash{\mermaidhash{\MMraw}}%
+  \edef\MMbase{\mermaidoutdir/\MMhash}%
+  \def\MMsrc{\MMbase.mmd}%
+  \ifmermaidpdf
+    \def\MMout{\MMbase.pdf}%
+  \else
+    \def\MMout{\MMbase.svg}%
+  \fi
+  % создаём исходник, если нет
+  \IfFileExists{\MMsrc}{}{%
+    \newwrite\MMfile
+    \immediate\openout\MMfile=\MMsrc
+    \immediate\write\MMfile{#2}%
+    \immediate\closeout\MMfile
+  }%
+  % генерируем выход, если нет
+  \IfFileExists{\MMout}{}{%
+    \immediate\write18{%
+      \mermaidcli\space
+      -i \MMsrc\space
+      -o \MMout\space
+      -b \mermaidbg\space
+      -s \mermaidscale
+    }%
+  }%
+  % вставляем
+  \IfFileExists{\MMout}{%
+    \includegraphics[#1]{\MMout}%
+  }{%
+    \fbox{\footnotesize Mermaid render failed: \MMout}%
+  }%
+  \endgroup
+}
+
+% окружение для многострочного Mermaid-кода
+\NewEnviron{mermaidenv}[1][]{%
+  \mermaid[#1]{\BODY}%
+}
