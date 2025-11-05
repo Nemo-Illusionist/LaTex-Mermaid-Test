@@ -3,24 +3,35 @@
 *.log
 *.out
 *.toc
-*.fls
-*.fdb_latexmk
 *.synctex.gz
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.idx
+*.ilg
+*.ind
 *.bbl
 *.blg
 *.bcf
 *.run.xml
 
-# Mermaid generated files
-mermaid-*.mmd
-mermaid-*.pdf
-mermaid-*.svg
+# Mermaid generated images (опционально - можно закоммитить для истории)
+# Раскомментируйте если не хотите коммитить сгенерированные изображения
+# mermaid-images/*.pdf
+# mermaid-images/*.svg
 
-# Font warnings
-missfont.log
+# Compiled PDFs (опционально)
+# main.pdf
+# main-ru.pdf
+# test-mermaid.pdf
 
-# macOS system files
+# macOS
 .DS_Store
 
-# Compiled PDF (uncomment if you want to track the final PDF)
-main.pdf
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

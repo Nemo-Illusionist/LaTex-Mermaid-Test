@@ -1,89 +1,138 @@
-name: Build LaTeX PDF (with Mermaid) and Release
+name: Build LaTeX PDF with Mermaid
 
 on:
   push:
-    tags:
-      - 'v*'          # релиз при пуше тега v*
-    branches:
-      - '**'          # сборка на любой ветке
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:  # Позволяет запускать вручную
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'false'
-      PUPPETEER_EXECUTABLE_PATH: '/usr/bin/google-chrome-stable'
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      # Node.js для mmdc (mermaid-cli)
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Install Mermaid CLI
-        run: npm i -g @mermaid-js/mermaid-cli
+    - name: Install Mermaid CLI
+      run: |
+        npm install -g @mermaid-js/mermaid-cli
+        mmdc --version
 
-      # Минимальный набор TeX Live + latexmk + кириллица
-      - name: Install TeX Live
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            latexmk \
-            texlive-latex-extra \
-            texlive-fonts-recommended \
-            texlive-lang-cyrillic
+    - name: Install TeX Live
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          texlive-xetex \
+          texlive-fonts-recommended \
+          texlive-fonts-extra \
+          texlive-latex-extra \
+          texlive-lang-cyrillic \
+          fonts-liberation \
+          fonts-dejavu-core
 
-      # Установка Google Chrome для Puppeteer
-      - name: Install Google Chrome
-        run: |
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
+    - name: Install additional fonts for Russian
+      run: |
+        sudo apt-get install -y \
+          fonts-freefont-ttf \
+          fonts-liberation2 \
+          fonts-noto
+        # Обновить кэш шрифтов
+        fc-cache -fv
 
-      # (опционально) зависимости Chromium для puppeteer (иногда нужны на свежем раннере)
-      - name: Install Chromium deps for Puppeteer (best-effort)
-        run: |
-          sudo apt-get install -y \
-            libnss3 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 \
-            libxrandr2 libxdamage1 libxext6 libxfixes3 libatk1.0-0 \
-            libatk-bridge2.0-0 libgtk-3-0 libasound2 libgbm1 \
-            libpango-1.0-0 libpangocairo-1.0-0 libcairo2 fonts-liberation || true
+    - name: Check available fonts
+      run: fc-list | grep -i "liberation\|dejavu\|noto" | head -20
 
-      # Сборка PDF. Важно: -shell-escape — чтобы mermaid.sty мог вызвать mmdc
-      - name: Build PDF with latexmk
-        run: |
-          # Проверяем наличие Chrome и переменные окружения
-          which google-chrome-stable || echo "Chrome not found, using Puppeteer bundled Chromium"
-          echo "PUPPETEER_EXECUTABLE_PATH=$PUPPETEER_EXECUTABLE_PATH"
-          # Тест mmdc
-          mmdc --version || echo "mmdc not found"
-          # Сборка
-          latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error main.tex
-          ls -l
+    - name: Update main.tex to use available font
+      run: |
+        # Заменить Arial на Liberation Sans (аналог Arial в Linux)
+        sed -i 's/\\setmainfont{Arial}/\\setmainfont{Liberation Sans}/g' main.tex
+        echo "Updated main.tex:"
+        head -10 main.tex
 
-      # Сохраняем PDF как artifact для любого push
-      - name: Upload PDF artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: main-pdf
-          path: main.pdf
-          if-no-files-found: error
-          retention-days: 14
+    - name: Compile LaTeX document
+      run: |
+        # Первая компиляция
+        xelatex -shell-escape -interaction=nonstopmode main.tex
+        # Вторая компиляция для корректных ссылок
+        xelatex -shell-escape -interaction=nonstopmode main.tex
 
-      # Если это push тега v*: создать Release и приложить PDF
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            main.pdf
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Check generated files
+      run: |
+        echo "Main PDF:"
+        ls -lh main.pdf
+        echo ""
+        echo "Mermaid images:"
+        ls -lh mermaid-images/
 
-      - name: Clean mermaid temp files (flat)
-        run: rm -f mermaid-*.mmd mermaid-*.pdf mermaid-*.svg || true
+    - name: Upload PDF artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: main-pdf
+        path: main.pdf
+        retention-days: 30
+
+    - name: Upload Mermaid SVG files
+      uses: actions/upload-artifact@v4
+      with:
+        name: mermaid-svg-images
+        path: mermaid-images/*.svg
+        retention-days: 30
+
+    - name: Upload Mermaid PDF files
+      uses: actions/upload-artifact@v4
+      with:
+        name: mermaid-pdf-images
+        path: mermaid-images/*.pdf
+        retention-days: 30
+
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          *.log
+          *.aux
+        retention-days: 7
+
+  # Опциональный job для создания релиза при тегах
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - name: Download PDF artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: main-pdf
+
+    - name: Download SVG artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: mermaid-svg-images
+        path: mermaid-svg/
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          main.pdf
+          mermaid-svg/*.svg
+        body: |
+          Автоматически сгенерированный релиз LaTeX документа с Mermaid диаграммами.
+
+          ## Содержимое
+          - `main.pdf` - основной документ
+          - Mermaid диаграммы в формате SVG
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
