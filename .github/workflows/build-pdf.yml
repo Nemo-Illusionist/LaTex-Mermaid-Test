@@ -1,0 +1,69 @@
+name: Build LaTeX PDF (with Mermaid) and Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # релиз при пуше тега v*
+    branches:
+      - '**'          # сборка на любой ветке
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node.js для mmdc (mermaid-cli)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: npm i -g @mermaid-js/mermaid-cli
+
+      # Минимальный набор TeX Live + latexmk + кириллица
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            latexmk \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-lang-cyrillic
+
+      # (опционально) зависимости Chromium для puppeteer (иногда нужны на свежем раннере)
+      - name: Install Chromium deps for Puppeteer (best-effort)
+        run: |
+          sudo apt-get install -y \
+            libnss3 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 \
+            libxrandr2 libxdamage1 libxext6 libxfixes3 libatk1.0-0 \
+            libatk-bridge2.0-0 libgtk-3-0 libasound2 libgbm1 \
+            libpango-1.0-0 libpangocairo-1.0-0 libcairo2 fonts-liberation || true
+
+      # Сборка PDF. Важно: -shell-escape — чтобы mermaid.sty мог вызвать mmdc
+      - name: Build PDF with latexmk
+        run: |
+          latexmk -pdf -shell-escape -interaction=nonstopmode -halt-on-error main.tex
+          ls -l
+
+      # Сохраняем PDF как artifact для любого push
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-pdf
+          path: main.pdf
+          if-no-files-found: error
+          retention-days: 14
+
+      # Если это push тега v*: создать Release и приложить PDF
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            main.pdf
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
