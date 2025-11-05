@@ -1,84 +1,123 @@
+% Объявляем, что пакет требует формат LaTeX2e
 \NeedsTeXFormat{LaTeX2e}
+% Предоставляем информацию о пакете (имя, дата, описание)
 \ProvidesPackage{mermaid}[2025/01/05 Mermaid diagrams support]
 
-% Package options
+% Опции пакета
+% Создаём булев флаг для выбора формата (PDF или SVG)
 \newif\ifmermaid@pdf
+% Опция 'pdf' устанавливает флаг в true (генерировать только PDF)
 \DeclareOption{pdf}{\mermaid@pdftrue}
+% Опция 'svg' устанавливает флаг в false (генерировать SVG и PDF)
 \DeclareOption{svg}{\mermaid@pdffalse}
+% Обрабатываем все опции пакета
 \ProcessOptions\relax
 
-% Required packages
+% Подключаемые пакеты
+% graphicx - для вставки изображений
 \RequirePackage{graphicx}
+% fancyvrb - для работы с verbatim окружениями (сохранение текста как есть)
 \RequirePackage{fancyvrb}
 
-% Counter for unique file names
+% Счётчик для уникальных имён файлов
+% Создаём счётчик для нумерации диаграм
 \newcounter{mermaid@counter}
+% Инициализируем счётчик нулём
 \setcounter{mermaid@counter}{0}
 
-% Directory for temporary Mermaid files
+% Директория для временных файлов Mermaid
+% Определяем имя папки для хранения .mmd и .pdf/.svg файлов
 \def\mermaid@dir{mermaid-images}
 
-% Create directory if it doesn't exist
+% Создание директории при начале документа
+% Хук, выполняемый в начале документа
 \AtBeginDocument{%
+  % Выполняем shell-команду для создания папки (если не существует)
   \immediate\write18{mkdir -p \mermaid@dir}%
 }
 
-% Helper to generate and include mermaid diagram
+% Вспомогательная команда для генерации и вставки диаграммы Mermaid
 \newcommand{\mermaid@generate}[2]{%
-  % #1 = width, #2 = mmd file path
+  % #1 = ширина изображения, #2 = путь к .mmd файлу
+  % Сохраняем путь к .mmd файлу в переменную
   \edef\mermaid@mmdfile{#2}%
+  % Формируем путь к выходному PDF файлу
   \edef\mermaid@pdffile{#2.pdf}%
-  % Check if puppeteer-config.json exists and add it to mmdc command
+  % Проверяем существование puppeteer-config.json для настроек Chromium
   \IfFileExists{puppeteer-config.json}{%
+    % Если файл есть, добавляем параметр -p с путём к конфигу
     \def\mermaid@puppeteerconfig{-p puppeteer-config.json}%
   }{%
+    % Если файла нет, параметр остаётся пустым
     \def\mermaid@puppeteerconfig{}%
   }%
+  % Проверяем флаг формата вывода
   \ifmermaid@pdf
-    % Generate PDF only
+    % Режим PDF: генерируем только PDF
+    % Выполняем mmdc (Mermaid CLI) с прозрачным фоном
     \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent \mermaid@puppeteerconfig}%
   \else
-    % Generate both SVG and PDF
+    % Режим SVG: генерируем и SVG, и PDF
+    % Формируем путь к SVG файлу
     \edef\mermaid@svgfile{#2.svg}%
+    % Выполняем две команды mmdc через && (сначала SVG, потом PDF)
     \immediate\write18{mmdc -i \mermaid@mmdfile\space -o \mermaid@svgfile\space -b transparent \mermaid@puppeteerconfig\space && mmdc -i \mermaid@mmdfile\space -o \mermaid@pdffile\space -b transparent \mermaid@puppeteerconfig}%
   \fi
-  % Always include as PDF (more compatible)
+  % Всегда вставляем PDF (более совместимо с LaTeX движками)
   \IfFileExists{\mermaid@pdffile}{%
+    % Если PDF файл существует, вставляем его с заданной шириной
     \includegraphics[width=#1]{\mermaid@pdffile}%
   }{%
+    % Если генерация не удалась, показываем сообщение об ошибке
     \fbox{\parbox[t]{#1}{\small\tt Error: Mermaid diagram generation failed}}%
   }%
 }
 
-% Write content to file via shell echo
+% Запись содержимого в файл через shell
 \newcommand{\mermaid@writeviaShell}[2]{%
-  % #1 = content, #2 = file path
+  % #1 = содержимое, #2 = путь к файлу
+  % Используем printf для записи содержимого в файл (сохраняет форматирование)
   \immediate\write18{printf '\@percentchar s' "#1" > "#2"}%
 }
 
-% Command version: \mermaid[width]{code}
+% Командная версия: \mermaid[ширина]{код}
 \newcommand{\mermaid}[2][\linewidth]{%
+  % Увеличиваем счётчик диаграм на 1
   \stepcounter{mermaid@counter}%
+  % Формируем базовое имя файла (mermaid-1, mermaid-2, ...)
   \edef\mermaid@basename{mermaid-\themermaid@counter}%
+  % Формируем полный путь к .mmd файлу
   \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
-  % Write content via shell
+  % Записываем код Mermaid в файл через shell
   \mermaid@writeviaShell{#2}{\mermaid@mmdfile}%
+  % Генерируем и вставляем диаграмму
   \mermaid@generate{#1}{\mermaid@mmdfile}%
 }
 
-% Environment version using VerbatimOut
+% Окружение для многострочных диаграмм: \begin{mermaidenv}[ширина]...\end{mermaidenv}
 \newenvironment{mermaidenv}[1][\linewidth]{%
+  % Увеличиваем счётчик диаграм на 1
   \stepcounter{mermaid@counter}%
+  % Формируем базовое имя файла
   \edef\mermaid@basename{mermaid-\themermaid@counter}%
+  % Формируем полный путь к .mmd файлу
   \edef\mermaid@mmdfile{\mermaid@dir/\mermaid@basename.mmd}%
+  % Сохраняем ширину в глобальной переменной (нужна при закрытии окружения)
   \xdef\mermaid@currentwidth{#1}%
+  % Сохраняем путь к файлу в глобальной переменной
   \xdef\mermaid@currentfile{\mermaid@mmdfile}%
+  % Начинаем захват verbatim текста в файл (сохраняет все символы как есть)
   \VerbatimOut{\mermaid@mmdfile}%
 }{%
+  % Завершаем захват verbatim текста
   \endVerbatimOut
-  \begin{center}%
-    \mermaid@generate{\mermaid@currentwidth}{\mermaid@currentfile}%
-  \end{center}%
+  % Начинаем новый абзац, добавляем отступ 0.5 строки, убираем отступ слева, центрируем
+  \par\vspace{0.5\baselineskip}\noindent\centering
+  % Генерируем и вставляем диаграмму с сохранёнными параметрами
+  \mermaid@generate{\mermaid@currentwidth}{\mermaid@currentfile}%
+  % Начинаем новый абзац, добавляем отступ 0.5 строки, запрещаем разрыв страницы
+  \par\vspace{0.5\baselineskip}\nobreak
 }
 
+% Конец файла пакета
 \endinput
