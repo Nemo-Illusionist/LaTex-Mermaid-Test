@@ -35,47 +35,29 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-npm-global-
 
-    - name: Cache apt packages and installed binaries
-      uses: actions/cache@v4
-      id: cache-apt
-      with:
-        path: |
-          /var/cache/apt/archives
-          /usr/share/texlive
-          /usr/lib/chromium
-          /usr/lib/x86_64-linux-gnu/chromium
-          /snap/chromium
-        key: ${{ runner.os }}-apt-chromium-texlive-v2-${{ hashFiles('.github/workflows/test-package.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-apt-chromium-texlive-v2-
-          ${{ runner.os }}-apt-chromium-texlive-
+    # Не кэшируем системные пакеты (apt/Chromium/TeX) - это создает проблемы с правами доступа
+    # Оставляем только npm кэш, который работает надежно
 
     - name: Install Chromium dependencies
       run: |
-        if ! command -v chromium-browser &> /dev/null && ! command -v chromium &> /dev/null; then
-          echo "Installing Chromium and dependencies..."
-          sudo apt-get update
-          sudo apt-get install -y \
-            chromium-browser \
-            libgbm1 \
-            libnss3 \
-            libnspr4 \
-            libatk1.0-0 \
-            libatk-bridge2.0-0 \
-            libcups2 \
-            libdrm2 \
-            libxkbcommon0 \
-            libxcomposite1 \
-            libxdamage1 \
-            libxfixes3 \
-            libxrandr2 \
-            libpango-1.0-0 \
-            libcairo2 \
-            libasound2t64
-        else
-          echo "Chromium already installed (from cache or system)"
-          chromium-browser --version || chromium --version || echo "Chromium installed but version check failed"
-        fi
+        sudo apt-get update
+        sudo apt-get install -y \
+          chromium-browser \
+          libgbm1 \
+          libnss3 \
+          libnspr4 \
+          libatk1.0-0 \
+          libatk-bridge2.0-0 \
+          libcups2 \
+          libdrm2 \
+          libxkbcommon0 \
+          libxcomposite1 \
+          libxdamage1 \
+          libxfixes3 \
+          libxrandr2 \
+          libpango-1.0-0 \
+          libcairo2 \
+          libasound2t64
 
     - name: Install Mermaid CLI
       run: |
@@ -100,27 +82,14 @@ jobs:
 
     - name: Install TeX Live
       run: |
-        if ! command -v xelatex &> /dev/null; then
-          echo "Installing TeX Live..."
-          sudo apt-get update
-          sudo apt-get install -y \
-            texlive-xetex \
-            texlive-fonts-recommended \
-            texlive-fonts-extra \
-            texlive-latex-extra \
-            fonts-liberation \
-            fonts-dejavu-core
-        else
-          echo "TeX Live already installed (from cache)"
-          xelatex --version | head -2
-        fi
-
-    - name: Cleanup apt cache lock files
-      run: |
-        # Remove lock files and directories that cause permission issues during cache save
-        sudo rm -f /var/cache/apt/archives/lock
-        sudo rm -rf /var/cache/apt/archives/partial
-        echo "Cleaned up apt cache lock files"
+        sudo apt-get update
+        sudo apt-get install -y \
+          texlive-xetex \
+          texlive-fonts-recommended \
+          texlive-fonts-extra \
+          texlive-latex-extra \
+          fonts-liberation \
+          fonts-dejavu-core
 
     - name: Run package tests
       run: |
@@ -129,13 +98,6 @@ jobs:
         cd mermaid-package
         chmod +x test-package.sh
         ./test-package.sh
-
-    - name: Final cleanup for cache
-      run: |
-        # Final cleanup before cache save (lock files are recreated during apt-get install)
-        sudo rm -f /var/cache/apt/archives/lock
-        sudo rm -rf /var/cache/apt/archives/partial
-        echo "Final cache cleanup done"
 
     - name: Upload test results
       if: always()
