@@ -1,0 +1,54 @@
+# Pre-commit hooks configuration for LaTeX-Mermaid project
+# Install pre-commit: pip install pre-commit
+# Setup hooks: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Security validation for .tex files
+  - repo: local
+    hooks:
+      - id: validate-tex-security
+        name: Validate LaTeX security
+        entry: scripts/validate-tex.sh
+        language: script
+        files: \.tex$
+        description: "Check .tex files for dangerous commands and security issues"
+        pass_filenames: true
+
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$|\.txt$'
+      - id: end-of-file-fixer
+        exclude: '\.pdf$|\.png$|\.jpg$'
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=5000']
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Shell script validation
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        args: ['-x']
+
+  # Prevent committing secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: 'package-lock.json'
+
+# Global settings
+default_language_version:
+  python: python3
+
+# Disable fail fast for security checks
+fail_fast: false
