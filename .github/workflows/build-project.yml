@@ -139,9 +139,9 @@ jobs:
 
     - name: Cleanup apt cache lock files
       run: |
-        # Remove lock files that cause permission issues during cache save
+        # Remove lock files and directories that cause permission issues during cache save
         sudo rm -f /var/cache/apt/archives/lock
-        sudo rm -f /var/cache/apt/archives/partial
+        sudo rm -rf /var/cache/apt/archives/partial
         echo "Cleaned up apt cache lock files"
 
     - name: Check available fonts
