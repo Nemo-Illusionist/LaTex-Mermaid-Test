@@ -1,0 +1,20 @@
+% Минимальный тестовый документ для mermaid.sty
+\documentclass{article}
+\usepackage{graphicx}
+
+% Подключаем пакет из текущей директории
+% Указываем outputdir=test-output для соответствия с -output-directory
+\usepackage[outputdir=test-output]{mermaid}
+
+\begin{document}
+
+\section{Test Mermaid Package}
+
+This is a minimal test document.
+
+\begin{mermaidenv}[width=5cm]
+graph TD
+  A[Test] --> B[Success]
+\end{mermaidenv}
+
+\end{document}

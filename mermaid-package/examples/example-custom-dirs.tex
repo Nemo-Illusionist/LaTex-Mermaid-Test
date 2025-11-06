@@ -1,0 +1,102 @@
+\documentclass[a4paper,12pt]{article}
+
+% Пример использования кастомных директорий для mermaid.sty
+% Компиляция: xelatex --shell-escape -output-directory=output example-custom-dirs.tex
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{russian}
+\setmainfont{Arial}
+
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+% Используем кастомные директории
+% outputdir должен совпадать с -output-directory
+% mermaiddir - любое имя для поддиректории
+\usepackage[outputdir=output, mermaiddir=diagrams]{mermaid}
+
+\title{Пример использования mermaid.sty v1.0.0}
+\author{Демонстрация конфигурируемых директорий}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Введение}
+
+Этот документ демонстрирует использование пакета \texttt{mermaid.sty} с кастомными настройками директорий.
+
+\textbf{Конфигурация:}
+\begin{itemize}
+  \item \texttt{outputdir=output} (вместо дефолтного \texttt{build})
+  \item \texttt{mermaiddir=diagrams} (вместо дефолтного \texttt{mermaid-images})
+\end{itemize}
+
+\section{Примеры диаграмм}
+
+\subsection{Блок-схема}
+
+\begin{figure}[h]
+  \centering
+  \begin{mermaidenv}[width=0.6\linewidth]
+  graph TD
+    A[Начало] --> B{Проверка}
+    B -->|Успех| C[Обработка]
+    B -->|Ошибка| D[Логирование]
+    C --> E[Конец]
+    D --> E
+  \end{mermaidenv}
+  \caption{Пример блок-схемы}
+  \label{fig:flowchart}
+\end{figure}
+
+\subsection{Диаграмма последовательности}
+
+\begin{figure}[h]
+  \centering
+  \begin{mermaidenv}[width=0.7\linewidth]
+  sequenceDiagram
+    participant Client
+    participant Server
+    participant Database
+
+    Client->>Server: Request
+    Server->>Database: Query
+    Database-->>Server: Result
+    Server-->>Client: Response
+  \end{mermaidenv}
+  \caption{Взаимодействие компонентов}
+  \label{fig:sequence}
+\end{figure}
+
+\section{Структура файлов}
+
+После компиляции структура директорий будет следующей:
+
+\begin{verbatim}
+project/
+├── example-custom-dirs.tex
+├── diagrams → output/diagrams/  (симлинк)
+└── output/
+    ├── example-custom-dirs.pdf
+    ├── example-custom-dirs.aux
+    ├── example-custom-dirs.log
+    └── diagrams/
+        ├── mermaid-1.mmd
+        ├── mermaid-1.mmd.png
+        ├── mermaid-2.mmd
+        └── mermaid-2.mmd.png
+\end{verbatim}
+
+\section{Заключение}
+
+Гибкая конфигурация позволяет:
+\begin{itemize}
+  \item Организовать структуру проекта по своему усмотрению
+  \item Использовать разные имена директорий для разных документов
+  \item Легко интегрироваться в существующие системы сборки
+\end{itemize}
+
+\end{document}

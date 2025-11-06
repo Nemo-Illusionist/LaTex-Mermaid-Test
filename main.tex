@@ -16,6 +16,10 @@
 \usepackage[hidelinks]{hyperref}
 
 % (опционально) mermaid может требовать спец. установку и --shell-escape; если ругается — закомментируй
+% Добавляем путь к нашему кастомному пакету
+\makeatletter
+\def\input@path{{mermaid-package/}}
+\makeatother
 \usepackage{mermaid}
 
 % ==== Данные методички ====
