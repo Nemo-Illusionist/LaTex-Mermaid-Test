@@ -99,7 +99,8 @@ run_test "config.tex существует" "test -f config.tex"
 run_test "cover.tex существует" "test -f cover.tex"
 run_test "vvedenie.tex существует" "test -f vvedenie.tex"
 run_test "Документация пакета существует" "test -f mermaid-package/README.md"
-run_test "GitHub Actions workflow существует" "test -f .github/workflows/build-pdf.yml"
+run_test "GitHub Actions: test-package.yml" "test -f .github/workflows/test-package.yml"
+run_test "GitHub Actions: build-project.yml" "test -f .github/workflows/build-project.yml"
 
 echo ""
 

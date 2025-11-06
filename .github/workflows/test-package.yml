@@ -1,0 +1,80 @@
+name: Test Mermaid Package
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'mermaid-package/**'
+      - '.github/workflows/test-package.yml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'mermaid-package/**'
+      - '.github/workflows/test-package.yml'
+  workflow_dispatch:  # Ручной запуск
+
+jobs:
+  test-package:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Chromium dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          chromium-browser \
+          libgbm1 \
+          libnss3 \
+          libnspr4 \
+          libatk1.0-0 \
+          libatk-bridge2.0-0 \
+          libcups2 \
+          libdrm2 \
+          libxkbcommon0 \
+          libxcomposite1 \
+          libxdamage1 \
+          libxfixes3 \
+          libxrandr2 \
+          libpango-1.0-0 \
+          libcairo2 \
+          libasound2t64
+
+    - name: Install Mermaid CLI
+      run: |
+        npm install -g @mermaid-js/mermaid-cli
+        mmdc --version
+
+    - name: Install TeX Live
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          texlive-xetex \
+          texlive-fonts-recommended \
+          texlive-fonts-extra \
+          texlive-latex-extra \
+          fonts-liberation \
+          fonts-dejavu-core
+
+    - name: Run package tests
+      run: |
+        cd mermaid-package
+        chmod +x test-package.sh
+        ./test-package.sh
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-test-results
+        path: |
+          mermaid-package/test-output/**
+          mermaid-package/output/**
+        retention-days: 7
