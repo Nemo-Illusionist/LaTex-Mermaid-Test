@@ -52,6 +52,17 @@ jobs:
         npm install -g @mermaid-js/mermaid-cli
         mmdc --version
 
+    - name: Configure Puppeteer for mmdc
+      run: |
+        # Создать конфигурацию Puppeteer с --no-sandbox
+        cat > puppeteer-config.json << 'EOF'
+        {
+          "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+        }
+        EOF
+        echo "Puppeteer config created:"
+        cat puppeteer-config.json
+
     - name: Install TeX Live
       run: |
         sudo apt-get update
@@ -65,6 +76,8 @@ jobs:
 
     - name: Run package tests
       run: |
+        # Копируем puppeteer-config.json в mermaid-package для тестов
+        cp puppeteer-config.json mermaid-package/
         cd mermaid-package
         chmod +x test-package.sh
         ./test-package.sh
