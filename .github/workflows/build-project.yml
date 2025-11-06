@@ -167,6 +167,13 @@ jobs:
         chmod +x test.sh
         ./test.sh
 
+    - name: Final cleanup for cache
+      run: |
+        # Final cleanup before cache save (lock files are recreated during apt-get install)
+        sudo rm -f /var/cache/apt/archives/lock
+        sudo rm -rf /var/cache/apt/archives/partial
+        echo "Final cache cleanup done"
+
     - name: Upload PDF artifact
       uses: actions/upload-artifact@v4
       with:
