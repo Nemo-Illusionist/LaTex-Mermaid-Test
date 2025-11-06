@@ -115,6 +115,13 @@ jobs:
           xelatex --version | head -2
         fi
 
+    - name: Cleanup apt cache lock files
+      run: |
+        # Remove lock files that cause permission issues during cache save
+        sudo rm -f /var/cache/apt/archives/lock
+        sudo rm -f /var/cache/apt/archives/partial
+        echo "Cleaned up apt cache lock files"
+
     - name: Run package tests
       run: |
         # Копируем puppeteer-config.json в mermaid-package для тестов

@@ -137,6 +137,13 @@ jobs:
           echo "Additional fonts already available (from cache)"
         fi
 
+    - name: Cleanup apt cache lock files
+      run: |
+        # Remove lock files that cause permission issues during cache save
+        sudo rm -f /var/cache/apt/archives/lock
+        sudo rm -f /var/cache/apt/archives/partial
+        echo "Cleaned up apt cache lock files"
+
     - name: Check available fonts
       run: fc-list | grep -i "liberation\|dejavu\|noto" | head -20
 
