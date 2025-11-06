@@ -33,7 +33,28 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Cache npm global packages
+      uses: actions/cache@v4
+      id: cache-npm-global
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-global-${{ hashFiles('.github/workflows/build-project.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-global-
+
+    - name: Cache apt packages
+      uses: actions/cache@v4
+      id: cache-apt
+      with:
+        path: |
+          /var/cache/apt/archives
+          /usr/share/texlive
+        key: ${{ runner.os }}-apt-texlive-${{ hashFiles('.github/workflows/build-project.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-texlive-
+
     - name: Install Chromium dependencies
+      if: steps.cache-apt.outputs.cache-hit != 'true'
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -56,7 +77,12 @@ jobs:
 
     - name: Install Mermaid CLI
       run: |
-        npm install -g @mermaid-js/mermaid-cli
+        if ! command -v mmdc &> /dev/null; then
+          echo "Installing Mermaid CLI..."
+          npm install -g @mermaid-js/mermaid-cli
+        else
+          echo "Mermaid CLI already installed (from cache)"
+        fi
         mmdc --version
 
     - name: Configure Puppeteer for mmdc
@@ -71,6 +97,7 @@ jobs:
         cat puppeteer-config.json
 
     - name: Install TeX Live
+      if: steps.cache-apt.outputs.cache-hit != 'true'
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -83,6 +110,7 @@ jobs:
           fonts-dejavu-core
 
     - name: Install additional fonts for Russian
+      if: steps.cache-apt.outputs.cache-hit != 'true'
       run: |
         sudo apt-get install -y \
           fonts-freefont-ttf \
