@@ -123,24 +123,44 @@ README.md должен содержать:
 - ✅ Добавлена валидация PDF (проверка страниц и размера файла)
 - ✅ **Кэширование npm глобальных пакетов** (~/.npm)
 - ✅ **Кэширование apt пакетов** (/var/cache/apt/archives, /usr/share/texlive)
-- ✅ Условная установка зависимостей (только при отсутствии кэша)
+- ✅ **Кэширование Chromium** (/usr/lib/chromium, /snap/chromium)
+- ✅ **Умная проверка установленных пакетов** (xelatex, chromium-browser, mmdc)
+- ✅ Пропуск установки при наличии бинарников в кэше
+- ✅ Условная установка зависимостей (только при отсутствии)
 - ✅ Раздельные кэши для test-package.yml и build-project.yml
 - ✅ Восстановление кэша с fallback ключами
 
 **Результат:**
-- Первый запуск: ~4-5 минут (установка всех зависимостей)
-- Последующие запуски: ~2-3 минуты (из кэша) - **ускорение ~40-50%**
-- Экономия трафика и времени на установку TeX Live (~500 MB)
+- Первый запуск: ~6 минут (установка всех зависимостей + создание кэша)
+- Второй запуск: ~2-3 минуты (из кэша) - **ускорение ~50-60%**
+- Экономия трафика: TeX Live (~500 MB) + Chromium (~200 MB)
+- Установка Chromium: с ~90 секунд до ~5 секунд при наличии в кэше
 
 **Пример кэширования:**
 ```yaml
-- name: Cache apt packages
+- name: Cache apt packages and installed binaries
   uses: actions/cache@v4
+  id: cache-apt
   with:
     path: |
       /var/cache/apt/archives
       /usr/share/texlive
-    key: ${{ runner.os }}-apt-texlive-${{ hashFiles('.github/workflows/*.yml') }}
+      /usr/lib/chromium
+      /usr/lib/x86_64-linux-gnu/chromium
+      /snap/chromium
+    key: ${{ runner.os }}-apt-chromium-texlive-v2-${{ hashFiles('.github/workflows/*.yml') }}
+    restore-keys: |
+      ${{ runner.os }}-apt-chromium-texlive-v2-
+      ${{ runner.os }}-apt-chromium-texlive-
+
+- name: Install Chromium dependencies
+  run: |
+    if ! command -v chromium-browser &> /dev/null && ! command -v chromium &> /dev/null; then
+      echo "Installing Chromium and dependencies..."
+      sudo apt-get install -y chromium-browser ...
+    else
+      echo "Chromium already installed (from cache or system)"
+    fi
 ```
 
 ### ~~5. **Безопасность (7/10)**~~ → **9/10** ✅ УЛУЧШЕНО
